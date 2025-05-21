@@ -1,14 +1,16 @@
 #define CUSTOM_SETTINGS
 #define INCLUDE_GAMEPAD_MODULE
-#include
-const int enableRightMotor = 23;
-const int rightMotorPin1 = 22;
-const int rightMotorPin2 = 21;
+#include <DabbleESP32.h>
+
+// right motor pins
+const int enableRightMotor = 5;
+const int rightMotorPin1 = 19;
+const int rightMotorPin2 = 18;
 
 // Left motor pins
-const int enableLeftMotor = 5;
-const int leftMotorPin1 = 19;
-const int leftMotorPin2 = 18;
+const int enableLeftMotor = 23;
+const int leftMotorPin1 = 22;
+const int leftMotorPin2 = 21;
 
 #define MAX_MOTOR_SPEED 255
 const int PWMFreq = 1000; /* 1 KHz */

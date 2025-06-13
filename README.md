@@ -1,5 +1,3 @@
----
-
 # 🧠 Sound-Sensing Robot
 
 ## 🚀 Overview

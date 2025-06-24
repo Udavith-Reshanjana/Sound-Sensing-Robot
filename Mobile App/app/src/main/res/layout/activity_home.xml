@@ -10,7 +10,7 @@
     android:background="#FFFEFA">
 
     <Button
-        android:id="@+id/button"
+        android:id="@+id/connectBtn"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="Connect"
@@ -95,7 +95,7 @@
                 android:textSize="20dp"/>
 
             <TextView
-                android:id="@+id/textView4"
+                android:id="@+id/soundTxt"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Sound"
@@ -125,7 +125,7 @@
                 android:textSize="20dp"/>
 
             <TextView
-                android:id="@+id/textView6"
+                android:id="@+id/soundLevelTxt"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="TextView"

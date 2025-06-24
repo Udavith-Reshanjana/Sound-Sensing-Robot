@@ -2,23 +2,38 @@
 int analogPin = 35;
 
 // Motor pins
-const int enableRightMotor = 5;
-const int rightMotorPin1 = 19;
-const int rightMotorPin2 = 18;
+const int enableRightMotor = 23;
+const int rightMotorPin1 = 21;
+const int rightMotorPin2 = 22;
 
-const int enableLeftMotor = 23;
-const int leftMotorPin1 = 22;
-const int leftMotorPin2 = 21;
+const int enableLeftMotor = 5;
+const int leftMotorPin1 = 18;
+const int leftMotorPin2 = 19;
 
 // Ultrasonic sensor
-#define echoPin 26
-#define trigPin 25
+#define echoPin 32
+#define trigPin 33
 
 #define MAX_MOTOR_SPEED 255
 const int PWMFreq = 1000;
 const int PWMResolution = 8;
 const int rightMotorPWMSpeedChannel = 4;
 const int leftMotorPWMSpeedChannel = 5;
+
+// —— Adaptive Noise-Floor Tracking parameters ——
+float ambient = 0.0;
+const float AMB_ALPHA      = 0.995;   // how fast ambient adapts (closer to 1 → slower)
+const float THRESHOLD_DELTA = 150.0;  // minimum margin above ambient to count as "external"
+
+// Update running ambient noise floor
+void updateAmbient(float level) {
+  ambient = AMB_ALPHA * ambient + (1.0 - AMB_ALPHA) * level;
+}
+
+// Return true if current level is a real external event
+bool isExternalSound(float level) {
+  return (level - ambient) > THRESHOLD_DELTA;
+}
 
 void setup() {
   Serial.begin(115200);
@@ -36,6 +51,17 @@ void setup() {
 
   ledcAttachPin(enableRightMotor, rightMotorPWMSpeedChannel);
   ledcAttachPin(enableLeftMotor, leftMotorPWMSpeedChannel);
+
+  // Optional: do a quick calibration of ambient with motors off
+  delay(500);
+  const int calSamples = 200;
+  long sumCal = 0;
+  for (int i = 0; i < calSamples; i++) {
+    int val = analogRead(analogPin);
+    sumCal += val;
+    delay(2);
+  }
+  ambient = (float)sumCal / calSamples;
 }
 
 void rotateMotor(int rightMotorSpeed, int leftMotorSpeed) {
@@ -53,11 +79,11 @@ void stopMotors() {
 }
 
 void turnLeft(int speed) {
-  rotateMotor(-speed, speed);
+  rotateMotor(100, -100);
 }
 
 void turnRight(int speed) {
-  rotateMotor(speed, -speed);
+  rotateMotor(-100, 100);
 }
 
 void moveBackward(int speed) {
@@ -65,7 +91,7 @@ void moveBackward(int speed) {
 }
 
 int getSoundLevel(float avg) {
-  if (avg <= 700) return 1;
+  if (avg <= 850)  return 1;
   else if (avg <= 1400) return 2;
   else if (avg <= 2100) return 3;
   else return 4;
@@ -82,9 +108,9 @@ int getSpeedByLevel(int level) {
 
 int getObstacleRadiusByLevel(int level) {
   switch (level) {
-    case 2: return 15;
-    case 3: return 35;
-    case 4: return 50;
+    case 2: return 30;
+    case 3: return 60;
+    case 4: return 90;
     default: return 0;
   }
 }
@@ -116,15 +142,25 @@ void loop() {
   }
 
   float avg = (float)sum / sampleCount;
-  int level = getSoundLevel(avg);
-  int speed = getSpeedByLevel(level);
+
+  // —— Adaptive noise-floor logic ——
+  bool external = isExternalSound(avg);
+  if (!external) {
+    updateAmbient(avg);
+  }
+
+  int level = external ? getSoundLevel(avg) : 1;
+  int speed  = getSpeedByLevel(level);
   int radius = getObstacleRadiusByLevel(level);
   int distance = readDistance();
 
-  Serial.print("Level: "); Serial.print(level);
+  Serial.print("Avg: ");     Serial.print(avg);
+  Serial.print(" | Ambient: "); Serial.print(ambient, 1);
+  Serial.print(" | Ext? ");   Serial.print(external);
+  Serial.print(" | Level: "); Serial.print(level-1);
   Serial.print(" | Speed: "); Serial.print(speed);
-  Serial.print(" | Distance: "); Serial.print(distance);
-  Serial.print(" | Radius: "); Serial.println(radius);
+  Serial.print(" | Dist: ");  Serial.print(distance);
+  Serial.print(" | Radius: ");Serial.println(radius);
 
   if (level >= 2) {
     if (distance > 0 && distance <= radius) {

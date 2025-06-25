@@ -20,10 +20,10 @@ const int PWMResolution = 8;
 const int rightMotorPWMSpeedChannel = 4;
 const int leftMotorPWMSpeedChannel = 5;
 
-// —— Adaptive Noise-Floor Tracking parameters ——
+// Adaptive Noise-Floor Tracking parameters
 float ambient = 0.0;
-const float AMB_ALPHA      = 0.995;   // how fast ambient adapts (closer to 1 → slower)
-const float THRESHOLD_DELTA = 150.0;  // minimum margin above ambient to count as "external"
+const float AMB_ALPHA      = 0.995;
+const float THRESHOLD_DELTA = 150.0;
 
 // Update running ambient noise floor
 void updateAmbient(float level) {
@@ -52,7 +52,7 @@ void setup() {
   ledcAttachPin(enableRightMotor, rightMotorPWMSpeedChannel);
   ledcAttachPin(enableLeftMotor, leftMotorPWMSpeedChannel);
 
-  // Optional: do a quick calibration of ambient with motors off
+  // A quick calibration of ambient with motors off
   delay(500);
   const int calSamples = 200;
   long sumCal = 0;
@@ -79,11 +79,11 @@ void stopMotors() {
 }
 
 void turnLeft(int speed) {
-  rotateMotor(100, -100);
+  rotateMotor(50, -50);
 }
 
 void turnRight(int speed) {
-  rotateMotor(-100, 100);
+  rotateMotor(-50, 50);
 }
 
 void moveBackward(int speed) {
@@ -143,7 +143,7 @@ void loop() {
 
   float avg = (float)sum / sampleCount;
 
-  // —— Adaptive noise-floor logic ——
+  //Adaptive noise-floor logic
   bool external = isExternalSound(avg);
   if (!external) {
     updateAmbient(avg);
@@ -192,6 +192,5 @@ void loop() {
   } else {
     stopMotors();
   }
-
   delay(100);
 }

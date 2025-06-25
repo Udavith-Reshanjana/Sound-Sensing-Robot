@@ -4,6 +4,7 @@ import android.Manifest
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.graphics.Color
 import android.net.wifi.WifiManager
 import android.os.*
 import android.provider.Settings
@@ -27,6 +28,7 @@ class HomeActivity : AppCompatActivity() {
     private val handler = Handler(Looper.getMainLooper())
     private val pollingInterval = 1000L // 1 second
     private var hasShownConnectedToast = false // Tracks if the Toast has already been shown
+    private var isCurrentlyConnected = false // Tracks the current connection status
 
     @RequiresApi(Build.VERSION_CODES.M)
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -64,11 +66,20 @@ class HomeActivity : AppCompatActivity() {
         Log.d("Wi-Fi Info", "SSID: $connectedSSID") // Logs the connected SSID
         val isConnected = info != null && connectedSSID == "\"SoundBot-AP\""
 
-        // Show Toast once if connected
+        // Show Toast once if connected and update button state
         if (isConnected && !hasShownConnectedToast) {
             hasShownConnectedToast = true
+            isCurrentlyConnected = true
             runOnUiThread {
                 Toast.makeText(this, "Successfully connected to $connectedSSID", Toast.LENGTH_SHORT).show()
+                connectBtn.text = "Connected"
+                connectBtn.setBackgroundColor(Color.RED)
+            }
+        } else if (!isConnected && isCurrentlyConnected) {
+            isCurrentlyConnected = false
+            runOnUiThread {
+                connectBtn.text = "Connect"
+                connectBtn.setBackgroundColor(resources.getColor(R.color.purple_200))
             }
         }
 

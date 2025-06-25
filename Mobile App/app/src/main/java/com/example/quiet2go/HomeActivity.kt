@@ -26,6 +26,7 @@ class HomeActivity : AppCompatActivity() {
     private val client = OkHttpClient()
     private val handler = Handler(Looper.getMainLooper())
     private val pollingInterval = 1000L // 1 second
+    private var hasShownConnectedToast = false // Tracks if the Toast has already been shown
 
     @RequiresApi(Build.VERSION_CODES.M)
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -61,8 +62,17 @@ class HomeActivity : AppCompatActivity() {
         val info = wifiManager.connectionInfo
         val connectedSSID = info.ssid
         Log.d("Wi-Fi Info", "SSID: $connectedSSID") // Logs the connected SSID
-        Toast.makeText(this, "Wi-Fi SSID: $connectedSSID", Toast.LENGTH_SHORT).show()
-        return info != null && connectedSSID == "\"SoundBot-AP\""
+        val isConnected = info != null && connectedSSID == "\"SoundBot-AP\""
+
+        // Show Toast once if connected
+        if (isConnected && !hasShownConnectedToast) {
+            hasShownConnectedToast = true
+            runOnUiThread {
+                Toast.makeText(this, "Successfully connected to $connectedSSID", Toast.LENGTH_SHORT).show()
+            }
+        }
+
+        return isConnected
     }
 
     private fun startPolling() {
@@ -74,13 +84,11 @@ class HomeActivity : AppCompatActivity() {
                         .build()
 
                     Log.d("HTTP Request", "Sending request to: http://192.168.4.1/status") // Log the request URL
-                    Toast.makeText(this@HomeActivity, "Sending API Request...", Toast.LENGTH_SHORT).show()
 
                     client.newCall(request).enqueue(object : Callback {
                         override fun onFailure(call: Call, e: IOException) {
                             Log.e("HTTP Error", "Request failed: ${e.message}")
                             runOnUiThread {
-                                Toast.makeText(this@HomeActivity, "Request Failed: ${e.message}", Toast.LENGTH_LONG).show()
                                 soundTxt.text = "N/A"
                                 soundLevelTxt.text = "N/A"
                             }
@@ -91,9 +99,6 @@ class HomeActivity : AppCompatActivity() {
                             if (responseBody != null) {
                                 val responseString = responseBody.string()
                                 Log.d("HTTP Response", responseString) // Logs the raw HTTP response
-                                runOnUiThread {
-                                    Toast.makeText(this@HomeActivity, "Received Response: $responseString", Toast.LENGTH_SHORT).show()
-                                }
                                 try {
                                     val json = JSONObject(responseString)
                                     val avg = json.getDouble("avg")
@@ -104,12 +109,10 @@ class HomeActivity : AppCompatActivity() {
                                     runOnUiThread {
                                         soundTxt.text = avg.toString()
                                         soundLevelTxt.text = level.toString()
-                                        Toast.makeText(this@HomeActivity, "Data Updated: Avg = $avg, Level = $level", Toast.LENGTH_SHORT).show()
                                     }
                                 } catch (e: Exception) {
                                     Log.e("JSON Parse Error", "Error parsing JSON: ${e.message}")
                                     runOnUiThread {
-                                        Toast.makeText(this@HomeActivity, "Parse Error: ${e.message}", Toast.LENGTH_LONG).show()
                                         soundTxt.text = "Parse Error"
                                         soundLevelTxt.text = "Parse Error"
                                     }
@@ -117,7 +120,6 @@ class HomeActivity : AppCompatActivity() {
                             } else {
                                 Log.e("HTTP Error", "Empty response from server.")
                                 runOnUiThread {
-                                    Toast.makeText(this@HomeActivity, "Empty Response", Toast.LENGTH_SHORT).show()
                                     soundTxt.text = "Empty Response"
                                     soundLevelTxt.text = "Empty Response"
                                 }
@@ -127,7 +129,6 @@ class HomeActivity : AppCompatActivity() {
                 } else {
                     runOnUiThread {
                         Log.w("Wi-Fi Connection", "Not connected to SoundBot-AP")
-                        Toast.makeText(this@HomeActivity, "Not connected to SoundBot-AP", Toast.LENGTH_SHORT).show()
                         soundTxt.text = "Not connected"
                         soundLevelTxt.text = "-"
                     }

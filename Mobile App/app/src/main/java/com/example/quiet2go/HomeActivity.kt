@@ -136,7 +136,7 @@ class HomeActivity : AppCompatActivity() {
                                     Log.d("Parsed Data", "Avg: $avg, Level: $level") // Log parsed values
 
                                     runOnUiThread {
-                                        soundTxt.text = "${if (avg >= 0) avg else 0} dB"
+                                        soundTxt.text = "${if (avg >= 0) avg * 0.01 else 0} dB"
                                         soundLevelTxt.text = soundLevel
                                         soundLevelTxt.setTextColor(textcolor)
                                     }
@@ -171,8 +171,6 @@ class HomeActivity : AppCompatActivity() {
             }
         })
     }
-
-
 }
 
 object VibrationUtil {

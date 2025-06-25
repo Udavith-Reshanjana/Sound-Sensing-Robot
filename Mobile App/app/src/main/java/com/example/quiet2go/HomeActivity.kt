@@ -6,6 +6,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.Color
+import android.media.MediaPlayer
 import android.net.wifi.WifiManager
 import android.os.*
 import android.provider.Settings
@@ -44,6 +45,7 @@ class HomeActivity : AppCompatActivity() {
 
         connectBtn.setOnClickListener {
             val intent = Intent(Settings.ACTION_WIFI_SETTINGS)
+            VibrationUtil.triggerVibration(this)
             startActivity(intent)
         }
     }
@@ -124,17 +126,26 @@ class HomeActivity : AppCompatActivity() {
                                         else -> "Very Loud"
                                     }
 
+                                    val textcolor = when (level) {
+                                        1 -> Color.GREEN
+                                        2 -> Color.YELLOW
+                                        3 -> Color.rgb(255, 165, 0)
+                                        else -> Color.RED
+                                    }
+
                                     Log.d("Parsed Data", "Avg: $avg, Level: $level") // Log parsed values
 
                                     runOnUiThread {
                                         soundTxt.text = "${if (avg >= 0) avg else 0} dB"
                                         soundLevelTxt.text = soundLevel
+                                        soundLevelTxt.setTextColor(textcolor)
                                     }
                                 } catch (e: Exception) {
                                     Log.e("JSON Parse Error", "Error parsing JSON: ${e.message}")
                                     runOnUiThread {
                                         soundTxt.text = "Parse Error"
                                         soundLevelTxt.text = "Parse Error"
+                                        soundLevelTxt.setTextColor(Color.rgb(0, 0, 139))
                                     }
                                 }
                             } else {
@@ -142,6 +153,7 @@ class HomeActivity : AppCompatActivity() {
                                 runOnUiThread {
                                     soundTxt.text = "Empty Response"
                                     soundLevelTxt.text = "Empty Response"
+                                    soundLevelTxt.setTextColor(Color.rgb(0, 0, 139))
                                 }
                             }
                         }
@@ -151,11 +163,63 @@ class HomeActivity : AppCompatActivity() {
                         Log.w("Wi-Fi Connection", "Not connected to SoundBot-AP")
                         soundTxt.text = "Not connected"
                         soundLevelTxt.text = "-"
+                        soundLevelTxt.setTextColor(Color.rgb(0, 0, 139))
                     }
                 }
 
                 handler.postDelayed(this, pollingInterval)
             }
         })
+    }
+
+
+}
+
+object VibrationUtil {
+    fun triggerVibration(context: Context, duration: Long = 150) {
+        playClickSound(context)
+        val vibrator = context.getSystemService(Context.VIBRATOR_SERVICE) as Vibrator?
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val vibrationEffect = VibrationEffect.createOneShot(
+                duration, // Duration in milliseconds
+                VibrationEffect.DEFAULT_AMPLITUDE // Default amplitude
+            )
+            vibrator?.cancel()
+            vibrator?.vibrate(vibrationEffect)
+        } else {
+            vibrator?.vibrate(duration) // Deprecated in API 26
+        }
+    }
+
+    fun triggerVibrationshort(context: Context) {
+        playClickSound(context)
+        val vibrator = context.getSystemService(Context.VIBRATOR_SERVICE) as Vibrator?
+
+        val vibrationEffect3: VibrationEffect
+
+        // this type of vibration requires API 29
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+
+            // create vibrator effect with the constant EFFECT_DOUBLE_CLICK
+            vibrationEffect3 =
+                VibrationEffect.createPredefined(VibrationEffect.EFFECT_HEAVY_CLICK)
+
+            // it is safe to cancel other vibrations currently taking place
+            if (vibrator != null) {
+                vibrator.cancel()
+            }
+            if (vibrator != null) {
+                vibrator.vibrate(vibrationEffect3)
+            }
+        }
+    }
+
+    private fun playClickSound(context: Context) {
+        val mediaPlayer = MediaPlayer.create(context, R.raw.click) // Replace with your sound resource
+        mediaPlayer.setOnCompletionListener { mp ->
+            mp.release() // Release resources after playback is complete
+        }
+        mediaPlayer.start()
     }
 }

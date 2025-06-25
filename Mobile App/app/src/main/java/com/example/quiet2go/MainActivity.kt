@@ -1,9 +1,10 @@
 package com.example.quiet2go
 
+import android.content.Context
 import android.content.Intent
+import android.media.MediaPlayer
+import android.os.*
 import android.support.v7.app.AppCompatActivity
-import android.os.Bundle
-import android.os.Handler
 
 class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -19,3 +20,4 @@ class MainActivity : AppCompatActivity() {
         },3000)
     }
 }
+

@@ -117,18 +117,18 @@ class HomeActivity : AppCompatActivity() {
                                     val avg = json.getDouble("avg")
                                     val level = json.getInt("level")
 
+                                    val soundLevel = when (level) {
+                                        1 -> "Very Quiet"
+                                        2 -> "Moderate"
+                                        3 -> "Loud"
+                                        else -> "Very Loud"
+                                    }
+
                                     Log.d("Parsed Data", "Avg: $avg, Level: $level") // Log parsed values
 
                                     runOnUiThread {
-                                        if (avg >= 0)
-                                        {
-                                            soundTxt.text = "$avg dB"
-                                        }
-                                        else
-                                        {
-                                            soundTxt.text = "0 dB"
-                                        }
-                                        soundLevelTxt.text = level.toString()
+                                        soundTxt.text = "${if (avg >= 0) avg else 0} dB"
+                                        soundLevelTxt.text = soundLevel
                                     }
                                 } catch (e: Exception) {
                                     Log.e("JSON Parse Error", "Error parsing JSON: ${e.message}")

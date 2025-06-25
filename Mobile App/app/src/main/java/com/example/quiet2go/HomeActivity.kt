@@ -1,6 +1,7 @@
 package com.example.quiet2go
 
 import android.Manifest
+import android.annotation.SuppressLint
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -105,6 +106,7 @@ class HomeActivity : AppCompatActivity() {
                             }
                         }
 
+                        @SuppressLint("SetTextI18n")
                         override fun onResponse(call: Call, response: Response) {
                             val responseBody = response.body
                             if (responseBody != null) {
@@ -118,7 +120,14 @@ class HomeActivity : AppCompatActivity() {
                                     Log.d("Parsed Data", "Avg: $avg, Level: $level") // Log parsed values
 
                                     runOnUiThread {
-                                        soundTxt.text = avg.toString()
+                                        if (avg >= 0)
+                                        {
+                                            soundTxt.text = "$avg dB"
+                                        }
+                                        else
+                                        {
+                                            soundTxt.text = "0 dB"
+                                        }
                                         soundLevelTxt.text = level.toString()
                                     }
                                 } catch (e: Exception) {

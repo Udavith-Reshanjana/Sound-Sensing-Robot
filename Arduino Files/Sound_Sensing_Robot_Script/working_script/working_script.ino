@@ -79,11 +79,11 @@ void stopMotors() {
 }
 
 void turnLeft(int speed) {
-  rotateMotor(100, -100);
+  rotateMotor(50, -50);
 }
 
 void turnRight(int speed) {
-  rotateMotor(-100, 100);
+  rotateMotor(-50, 50);
 }
 
 void moveBackward(int speed) {
@@ -192,6 +192,5 @@ void loop() {
   } else {
     stopMotors();
   }
-
   delay(100);
 }

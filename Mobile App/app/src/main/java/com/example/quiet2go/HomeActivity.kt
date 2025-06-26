@@ -133,7 +133,12 @@ class HomeActivity : AppCompatActivity() {
                                     }
 
                                     val adjustedAvg = if (avg >= 0) avg * 0.01 else 0.0
-                                    val roundedAvg = DecimalFormat("#.##").format(adjustedAvg)
+                                    val roundedAvg = if (adjustedAvg != 0.0) {
+                                        val correctedAvg = adjustedAvg + 55 // Add the measurement error
+                                        DecimalFormat("#.##").format(correctedAvg) // Format the corrected value
+                                    } else {
+                                        "0.0"
+                                    }
 
                                     Log.d("Parsed Data", "Avg: $roundedAvg, Level: $level") // Log parsed values
 

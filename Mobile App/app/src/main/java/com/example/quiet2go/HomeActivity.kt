@@ -19,6 +19,7 @@ import android.widget.Toast
 import okhttp3.*
 import org.json.JSONObject
 import java.io.IOException
+import java.text.DecimalFormat
 
 class HomeActivity : AppCompatActivity() {
 
@@ -29,7 +30,6 @@ class HomeActivity : AppCompatActivity() {
     private val client = OkHttpClient()
     private val handler = Handler(Looper.getMainLooper())
     private val pollingInterval = 1000L // 1 second
-    private var hasShownConnectedToast = false // Tracks if the Toast has already been shown
     private var isCurrentlyConnected = false // Tracks the current connection status
 
     @RequiresApi(Build.VERSION_CODES.M)
@@ -69,9 +69,7 @@ class HomeActivity : AppCompatActivity() {
         Log.d("Wi-Fi Info", "SSID: $connectedSSID") // Logs the connected SSID
         val isConnected = info != null && connectedSSID == "\"SoundBot-AP\""
 
-        // Show Toast once if connected and update button state
-        if (isConnected && !hasShownConnectedToast) {
-            hasShownConnectedToast = true
+        if (isConnected && !isCurrentlyConnected) {
             isCurrentlyConnected = true
             runOnUiThread {
                 Toast.makeText(this, "Successfully connected to $connectedSSID", Toast.LENGTH_SHORT).show()
@@ -81,6 +79,7 @@ class HomeActivity : AppCompatActivity() {
         } else if (!isConnected && isCurrentlyConnected) {
             isCurrentlyConnected = false
             runOnUiThread {
+                Toast.makeText(this, "Disconnected from $connectedSSID", Toast.LENGTH_SHORT).show()
                 connectBtn.text = "Connect"
                 connectBtn.setBackgroundColor(resources.getColor(R.color.purple_200))
             }
@@ -126,19 +125,22 @@ class HomeActivity : AppCompatActivity() {
                                         else -> "Very Loud"
                                     }
 
-                                    val textcolor = when (level) {
+                                    val textColor = when (level) {
                                         1 -> Color.GREEN
                                         2 -> Color.YELLOW
                                         3 -> Color.rgb(255, 165, 0)
                                         else -> Color.RED
                                     }
 
-                                    Log.d("Parsed Data", "Avg: $avg, Level: $level") // Log parsed values
+                                    val adjustedAvg = if (avg >= 0) avg * 0.01 else 0.0
+                                    val roundedAvg = DecimalFormat("#.##").format(adjustedAvg)
+
+                                    Log.d("Parsed Data", "Avg: $roundedAvg, Level: $level") // Log parsed values
 
                                     runOnUiThread {
-                                        soundTxt.text = "${if (avg >= 0) avg * 0.01 else 0} dB"
+                                        soundTxt.text = "$roundedAvg dB"
                                         soundLevelTxt.text = soundLevel
-                                        soundLevelTxt.setTextColor(textcolor)
+                                        soundLevelTxt.setTextColor(textColor)
                                     }
                                 } catch (e: Exception) {
                                     Log.e("JSON Parse Error", "Error parsing JSON: ${e.message}")
@@ -190,31 +192,8 @@ object VibrationUtil {
         }
     }
 
-    fun triggerVibrationshort(context: Context) {
-        playClickSound(context)
-        val vibrator = context.getSystemService(Context.VIBRATOR_SERVICE) as Vibrator?
-
-        val vibrationEffect3: VibrationEffect
-
-        // this type of vibration requires API 29
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-
-            // create vibrator effect with the constant EFFECT_DOUBLE_CLICK
-            vibrationEffect3 =
-                VibrationEffect.createPredefined(VibrationEffect.EFFECT_HEAVY_CLICK)
-
-            // it is safe to cancel other vibrations currently taking place
-            if (vibrator != null) {
-                vibrator.cancel()
-            }
-            if (vibrator != null) {
-                vibrator.vibrate(vibrationEffect3)
-            }
-        }
-    }
-
     private fun playClickSound(context: Context) {
-        val mediaPlayer = MediaPlayer.create(context, R.raw.click) // Replace with your sound resource
+        val mediaPlayer = MediaPlayer.create(context, R.raw.click)
         mediaPlayer.setOnCompletionListener { mp ->
             mp.release() // Release resources after playback is complete
         }

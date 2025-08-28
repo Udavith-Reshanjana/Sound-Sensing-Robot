@@ -53,14 +53,14 @@ const char* mqtt_broker = "192.168.4.1";
 const int mqtt_port = 1883;
 const char* status_topic = "soundbot/status";
 
-// Connection management - FIXED: Non-blocking MQTT
+// Connection management - Non-blocking MQTT
 unsigned long lastWiFiCheck = 0;
 const unsigned long WIFI_CHECK_INTERVAL = 5000;
 unsigned long lastMQTTPublish = 0;
 const unsigned long MQTT_PUBLISH_INTERVAL = 1000;
 unsigned long lastMQTTAttempt = 0;
-const unsigned long MQTT_RETRY_INTERVAL = 10000;  // Try MQTT every 10 seconds
-bool mqttEnabled = true;  // Can be toggled via web interface
+const unsigned long MQTT_RETRY_INTERVAL = 10000;
+bool mqttEnabled = true;
 bool mqttConnected = false;
 int mqttRetryCount = 0;
 const int MAX_MQTT_RETRIES = 3;
@@ -214,14 +214,13 @@ void checkWiFiConnection() {
   }
 }
 
-// FIXED: Non-blocking MQTT connection
+// MQTT callback - silent operation
 void mqttCallback(char* topic, byte* payload, unsigned int length) {
   String message = "";
   for (int i = 0; i < length; i++) {
     message += (char)payload[i];
   }
-  Serial.print("MQTT message received: ");
-  Serial.println(message);
+  // Process MQTT messages silently
 }
 
 void tryMQTTConnection() {
@@ -233,29 +232,19 @@ void tryMQTTConnection() {
   
   lastMQTTAttempt = millis();
   
-  Serial.print("Attempting MQTT connection...");
-  
   // Set shorter timeout for connection attempt
-  mqtt.setSocketTimeout(2);  // 2 second timeout
+  mqtt.setSocketTimeout(2);
   
   if (mqtt.connect("SoundBot")) {
-    Serial.println("connected");
     mqttConnected = true;
     mqttRetryCount = 0;
-    mqtt.subscribe("soundbot/control");  // Optional control topic
+    mqtt.subscribe("soundbot/control");
   } else {
     mqttRetryCount++;
-    Serial.print("failed, rc=");
-    Serial.print(mqtt.state());
-    Serial.print(" (attempt ");
-    Serial.print(mqttRetryCount);
-    Serial.println(")");
     
     // Disable MQTT temporarily after max retries
     if (mqttRetryCount >= MAX_MQTT_RETRIES) {
-      Serial.println("Max MQTT retries reached. MQTT disabled for this session.");
-      Serial.println("Robot will continue operating without MQTT.");
-      mqttEnabled = false;  // Disable for this session
+      mqttEnabled = false;
     }
     
     mqttConnected = false;
@@ -284,7 +273,6 @@ void publishMQTTStatus() {
   serializeJson(doc, jsonString);
   
   if (!mqtt.publish(status_topic, jsonString.c_str())) {
-    Serial.println("MQTT publish failed");
     mqttConnected = false;
   }
 }
@@ -292,8 +280,9 @@ void publishMQTTStatus() {
 // ======== SETUP ========
 void setup() {
   Serial.begin(115200);
-  Serial.println("Starting SoundBot...");
-  Serial.println("Robot will work independently of MQTT/App connections");
+  Serial.println("SoundBot Starting - IoT Sound-Sensing Robot");
+  Serial.println("Owner: Udavith-Reshanjana");
+  Serial.println("Date: 2025-08-28 09:50:35 UTC");
   
   pinMode(analogPin, INPUT);
   pinMode(trigPin, OUTPUT);
@@ -309,7 +298,7 @@ void setup() {
   ledcAttachPin(enableLeftMotor, leftMotorPWMSpeedChannel);
 
   // Ambient calibration
-  Serial.println("Calibrating ambient noise...");
+  Serial.println("Calibrating ambient noise level...");
   delay(1000);
   long sumCal = 0;
   int validReadings = 0;
@@ -326,7 +315,7 @@ void setup() {
   if (validReadings > 0) {
     ambient = (float)sumCal / validReadings;
   }
-  Serial.print("Initial ambient level: ");
+  Serial.print("Initial ambient noise level: ");
   Serial.println(ambient);
 
   // WiFi AP setup
@@ -340,19 +329,18 @@ void setup() {
   bool apStarted = WiFi.softAP(ssid, password, 1, false, 4);
   
   if (apStarted) {
-    Serial.println("WiFi AP started successfully");
+    Serial.println("WiFi access point started successfully");
     Serial.print("AP IP address: ");
     Serial.println(WiFi.softAPIP());
-    Serial.println("Users can connect to 'SoundBot-AP' network");
+    Serial.println("Network name: SoundBot-AP");
   } else {
     Serial.println("Failed to start WiFi AP - Robot will work in standalone mode");
   }
 
-  // MQTT setup - non-blocking
+  // MQTT setup - silent operation
   mqtt.setServer(mqtt_broker, mqtt_port);
   mqtt.setCallback(mqttCallback);
-  mqtt.setKeepAlive(15);  // Shorter keepalive
-  Serial.println("MQTT configured - will attempt connection when possible");
+  mqtt.setKeepAlive(15);
 
   // HTTP API endpoints
   server.on("/status", HTTP_GET, []() {
@@ -365,8 +353,6 @@ void setup() {
     doc["uptime"] = millis();
     doc["free_heap"] = ESP.getFreeHeap();
     doc["connected_stations"] = WiFi.softAPgetStationNum();
-    doc["mqtt_enabled"] = mqttEnabled;
-    doc["mqtt_connected"] = mqtt.connected();
     doc["wifi_ap_active"] = (WiFi.getMode() == WIFI_AP);
     
     String jsonString;
@@ -376,59 +362,45 @@ void setup() {
     server.send(200, "application/json", jsonString);
   });
 
-  // FIXED: Add control endpoints
-  server.on("/control", HTTP_POST, []() {
-    if (server.hasArg("mqtt")) {
-      String mqttControl = server.arg("mqtt");
-      if (mqttControl == "enable") {
-        mqttEnabled = true;
-        mqttRetryCount = 0;
-        Serial.println("MQTT enabled via web interface");
-      } else if (mqttControl == "disable") {
-        mqttEnabled = false;
-        if (mqtt.connected()) {
-          mqtt.disconnect();
-        }
-        Serial.println("MQTT disabled via web interface");
-      }
-    }
-    
-    server.sendHeader("Access-Control-Allow-Origin", "*");
-    server.send(200, "application/json", "{\"status\":\"ok\"}");
-  });
-
-  // FIXED: Simple web interface with proper string handling
+  // Clean web interface without MQTT references
   server.on("/", HTTP_GET, []() {
     String html = "<!DOCTYPE html><html><head><title>SoundBot Control</title>";
     html += "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">";
-    html += "<style>body { font-family: Arial, sans-serif; margin: 20px; }";
-    html += ".status { background: #f0f0f0; padding: 10px; margin: 10px 0; border-radius: 5px; }";
-    html += ".button { background: #007cba; color: white; padding: 10px 20px; border: none; border-radius: 5px; margin: 5px; cursor: pointer; }";
-    html += ".button:hover { background: #005a87; }";
-    html += ".red { background: #dc3545; } .green { background: #28a745; }</style></head>";
-    html += "<body><h1>SoundBot Control Panel</h1>";
-    html += "<div class=\"status\" id=\"status\">Loading...</div>";
-    html += "<button class=\"button\" onclick=\"toggleMQTT()\">Toggle MQTT</button>";
-    html += "<button class=\"button\" onclick=\"refreshStatus()\">Refresh</button>";
+    html += "<style>body { font-family: Arial, sans-serif; margin: 20px; background: #f5f5f5; }";
+    html += ".container { max-width: 600px; margin: 0 auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }";
+    html += ".status { background: #f8f9fa; padding: 15px; margin: 15px 0; border-radius: 5px; border-left: 4px solid #007bff; }";
+    html += ".header { text-align: center; color: #333; margin-bottom: 20px; }";
+    html += ".data-row { display: flex; justify-content: space-between; margin: 8px 0; padding: 5px 0; border-bottom: 1px solid #eee; }";
+    html += ".label { font-weight: bold; color: #555; }";
+    html += ".value { color: #333; }";
+    html += ".button { background: #007bff; color: white; padding: 12px 24px; border: none; border-radius: 5px; margin: 5px; cursor: pointer; font-size: 16px; }";
+    html += ".button:hover { background: #0056b3; }";
+    html += ".footer { text-align: center; margin-top: 20px; color: #666; font-size: 14px; }</style></head>";
+    html += "<body><div class=\"container\">";
+    html += "<div class=\"header\"><h1>SoundBot Control Panel</h1>";
+    html += "<p>Owner: Udavith-Reshanjana</p></div>";
+    html += "<div class=\"status\" id=\"status\">Loading robot status...</div>";
+    html += "<div style=\"text-align: center;\">";
+    html += "<button class=\"button\" onclick=\"refreshStatus()\">Refresh Status</button></div>";
+    html += "<div class=\"footer\">";
+    html += "<p>IoT Sound-Sensing Robot | Independent Operation</p>";
+    html += "<p>Last updated: <span id=\"timestamp\">--</span></p></div>";
+    html += "</div>";
     html += "<script>";
     html += "function refreshStatus() {";
     html += "fetch('/status').then(response => response.json()).then(data => {";
+    html += "const stateNames = ['Forward', 'Turn Left', 'Backing Up', 'Turn Right', 'Stopped'];";
     html += "document.getElementById('status').innerHTML = ";
-    html += "'<strong>Robot Status:</strong><br>' +";
-    html += "'Sound Level: ' + data.level + '<br>' +";
-    html += "'Distance: ' + data.distance + ' cm<br>' +";
-    html += "'State: ' + data.state + '<br>' +";
-    html += "'Connected Devices: ' + data.connected_stations + '<br>' +";
-    html += "'MQTT: ' + (data.mqtt_connected ? 'Connected' : 'Disconnected') + '<br>' +";
-    html += "'Uptime: ' + Math.floor(data.uptime / 1000) + ' seconds';";
+    html += "'<div class=\"data-row\"><span class=\"label\">Sound Level:</span><span class=\"value\">' + data.level + '</span></div>' +";
+    html += "'<div class=\"data-row\"><span class=\"label\">Sound Intensity:</span><span class=\"value\">' + data.avg.toFixed(1) + ' units</span></div>' +";
+    html += "'<div class=\"data-row\"><span class=\"label\">Distance:</span><span class=\"value\">' + data.distance + ' cm</span></div>' +";
+    html += "'<div class=\"data-row\"><span class=\"label\">Robot State:</span><span class=\"value\">' + (stateNames[data.state] || 'Unknown') + '</span></div>' +";
+    html += "'<div class=\"data-row\"><span class=\"label\">Connected Devices:</span><span class=\"value\">' + data.connected_stations + '</span></div>' +";
+    html += "'<div class=\"data-row\"><span class=\"label\">Uptime:</span><span class=\"value\">' + Math.floor(data.uptime / 1000) + ' seconds</span></div>' +";
+    html += "'<div class=\"data-row\"><span class=\"label\">Free Memory:</span><span class=\"value\">' + Math.floor(data.free_heap / 1024) + ' KB</span></div>';";
+    html += "document.getElementById('timestamp').textContent = new Date().toLocaleTimeString();";
     html += "}); }";
-    html += "function toggleMQTT() {";
-    html += "fetch('/control', {";
-    html += "method: 'POST',";
-    html += "headers: {'Content-Type': 'application/x-www-form-urlencoded'},";
-    html += "body: 'mqtt=' + (Math.random() > 0.5 ? 'enable' : 'disable')";
-    html += "}).then(() => refreshStatus()); }";
-    html += "setInterval(refreshStatus, 2000); refreshStatus();";
+    html += "setInterval(refreshStatus, 3000); refreshStatus();";
     html += "</script></body></html>";
     
     server.send(200, "text/html", html);
@@ -438,21 +410,22 @@ void setup() {
   Serial.println("HTTP server started on http://192.168.4.1");
   Serial.println("=== SoundBot Ready ===");
   Serial.println("Robot is operational and ready to respond to sound");
+  Serial.println("IoT monitoring available via mobile app connection");
 }
 
 // ======== MAIN LOOP ========
 void loop() {
-  // Handle WiFi and server - these are non-blocking
+  // Handle WiFi and server - non-blocking
   checkWiFiConnection();
   server.handleClient();
   
-  // Handle MQTT - non-blocking, won't interfere with robot operation
+  // Handle MQTT - silent background operation
   if (mqttEnabled) {
     if (mqtt.connected()) {
-      mqtt.loop();  // Handle MQTT messages
-      publishMQTTStatus();  // Publish status if connected
+      mqtt.loop();
+      publishMQTTStatus();
     } else {
-      tryMQTTConnection();  // Try to connect if not connected
+      tryMQTTConnection();
     }
   }
 
@@ -488,7 +461,7 @@ void loop() {
   // Read distance
   currentDistance = readDistance();
 
-  // Debug output
+  // Clean debug output - no MQTT status
   static unsigned long lastDebug = 0;
   if (millis() - lastDebug >= 2000) {
     lastDebug = millis();
@@ -496,8 +469,7 @@ void loop() {
     Serial.print(" | Level: "); Serial.print(level);
     Serial.print(" | Distance: "); Serial.print(currentDistance);
     Serial.print(" | State: "); Serial.print(robotState);
-    Serial.print(" | WiFi Clients: "); Serial.print(WiFi.softAPgetStationNum());
-    Serial.print(" | MQTT: "); Serial.println(mqtt.connected() ? "OK" : "OFF");
+    Serial.print(" | WiFi Clients: "); Serial.println(WiFi.softAPgetStationNum());
   }
 
   // ===== ROBOT MOVEMENT CONTROL - CORE FUNCTIONALITY =====
@@ -507,5 +479,5 @@ void loop() {
     stopMotors();
   }
 
-  delay(100);  // Balanced delay for responsive operation
+  delay(100);
 }

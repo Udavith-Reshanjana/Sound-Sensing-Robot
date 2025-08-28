@@ -28,14 +28,13 @@ class HomeActivity : AppCompatActivity() {
     private lateinit var soundLevelTxt: TextView
     private lateinit var robotStateTxt: TextView
     private lateinit var distanceTxt: TextView
-    private lateinit var mqttStatusTxt: TextView
     private lateinit var uptimeTxt: TextView
 
     private val client = OkHttpClient()
     private val handler = Handler(Looper.getMainLooper())
-    private val pollingInterval = 1000L // 1 second
-    private var isCurrentlyConnected = false // Tracks the current connection status
-    private var lastSoundLevel = 1 // Track sound level changes
+    private val pollingInterval = 1000L
+    private var isCurrentlyConnected = false
+    private var lastSoundLevel = 1
     private var consecutiveErrors = 0
     private val maxConsecutiveErrors = 5
 
@@ -44,13 +43,12 @@ class HomeActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_home)
 
-        // Initialize views
+        // Initialize views (removed mqttStatusTxt)
         connectBtn = findViewById(R.id.connectBtn)
         soundTxt = findViewById(R.id.soundTxt)
         soundLevelTxt = findViewById(R.id.soundLevelTxt)
-        robotStateTxt = findViewById(R.id.robotStateTxt)
+        robotStateTxt = findViewById(R.id.robot2StateTxt)
         distanceTxt = findViewById(R.id.distanceTxt)
-        mqttStatusTxt = findViewById(R.id.mqttStatusTxt)
         uptimeTxt = findViewById(R.id.uptimeTxt)
 
         requestLocationPermission()
@@ -58,10 +56,10 @@ class HomeActivity : AppCompatActivity() {
         connectBtn.setOnClickListener {
             val intent = Intent(Settings.ACTION_WIFI_SETTINGS)
             VibrationUtil.triggerVibration(this)
+            Toast.makeText(this, "Connect to 'SoundBot-AP' network", Toast.LENGTH_LONG).show()
             startActivity(intent)
         }
 
-        // Initialize display
         resetDisplay()
     }
 
@@ -91,9 +89,9 @@ class HomeActivity : AppCompatActivity() {
 
         if (isConnected && !isCurrentlyConnected) {
             isCurrentlyConnected = true
-            consecutiveErrors = 0 // Reset error counter on successful connection
+            consecutiveErrors = 0
             runOnUiThread {
-                Toast.makeText(this, "Successfully connected to SoundBot-AP", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, "Connected to SoundBot! Real-time monitoring active.", Toast.LENGTH_LONG).show()
                 connectBtn.text = "Connected"
                 connectBtn.setBackgroundColor(Color.GREEN)
             }
@@ -116,13 +114,11 @@ class HomeActivity : AppCompatActivity() {
             soundLevelTxt.text = "-"
             robotStateTxt.text = "Unknown"
             distanceTxt.text = "N/A"
-            mqttStatusTxt.text = "N/A"
             uptimeTxt.text = "N/A"
 
             soundLevelTxt.setTextColor(Color.GRAY)
             robotStateTxt.setTextColor(Color.GRAY)
             distanceTxt.setTextColor(Color.GRAY)
-            mqttStatusTxt.setTextColor(Color.GRAY)
         }
     }
 
@@ -139,12 +135,12 @@ class HomeActivity : AppCompatActivity() {
 
     private fun getRobotStateColor(state: Int): Int {
         return when (state) {
-            0 -> Color.GREEN        // Moving Forward
-            1 -> Color.BLUE         // Turning Left
-            2 -> Color.rgb(255, 165, 0)  // Backing Up (Orange)
-            3 -> Color.BLUE         // Turning Right
-            4 -> Color.RED          // Stopped
-            else -> Color.GRAY      // Unknown
+            0 -> Color.GREEN
+            1 -> Color.BLUE
+            2 -> Color.rgb(255, 165, 0)
+            3 -> Color.BLUE
+            4 -> Color.RED
+            else -> Color.GRAY
         }
     }
 
@@ -165,7 +161,7 @@ class HomeActivity : AppCompatActivity() {
     private var pollingRunnable: Runnable? = null
 
     private fun startPolling() {
-        stopPolling() // Stop any existing polling
+        stopPolling()
 
         pollingRunnable = object : Runnable {
             override fun run() {
@@ -208,10 +204,9 @@ class HomeActivity : AppCompatActivity() {
                                     val distance = json.getInt("distance")
                                     val ambient = json.getDouble("ambient")
                                     val uptime = json.getLong("uptime")
-                                    val mqttConnected = json.optBoolean("mqtt_connected", false)
                                     val connectedStations = json.optInt("connected_stations", 0)
 
-                                    consecutiveErrors = 0 // Reset error counter on successful response
+                                    consecutiveErrors = 0
 
                                     // Sound level processing
                                     val soundLevel = when (level) {
@@ -228,7 +223,7 @@ class HomeActivity : AppCompatActivity() {
                                         else -> Color.RED
                                     }
 
-                                    // Sound calculation (matching Arduino logic)
+                                    // Sound calculation
                                     val adjustedAvg = if (avg >= 0) avg * 0.01 else 0.0
                                     val roundedAvg = if (adjustedAvg != 0.0) {
                                         val correctedAvg = adjustedAvg + 47
@@ -242,16 +237,12 @@ class HomeActivity : AppCompatActivity() {
                                     val robotStateColor = getRobotStateColor(state)
 
                                     // Distance display
-                                    val distanceText = if (distance >= 999) "Clear" else "${distance} cm"
+                                    val distanceText = if (distance >= 999) "Clear Path" else "$distance cm"
                                     val distanceColor = when {
                                         distance >= 999 -> Color.GREEN
                                         distance > 50 -> Color.YELLOW
                                         else -> Color.RED
                                     }
-
-                                    // MQTT status
-                                    val mqttText = if (mqttConnected) "Connected" else "Disconnected"
-                                    val mqttColor = if (mqttConnected) Color.GREEN else Color.RED
 
                                     // Uptime formatting
                                     val uptimeText = formatUptime(uptime)
@@ -274,9 +265,6 @@ class HomeActivity : AppCompatActivity() {
 
                                         distanceTxt.text = distanceText
                                         distanceTxt.setTextColor(distanceColor)
-
-                                        mqttStatusTxt.text = mqttText
-                                        mqttStatusTxt.setTextColor(mqttColor)
 
                                         uptimeTxt.text = uptimeText
                                         uptimeTxt.setTextColor(Color.BLACK)
@@ -307,14 +295,12 @@ class HomeActivity : AppCompatActivity() {
                     }
                 }
 
-                // Schedule next polling
                 pollingRunnable?.let {
                     handler.postDelayed(it, pollingInterval)
                 }
             }
         }
 
-        // Start polling
         pollingRunnable?.let {
             handler.post(it)
         }

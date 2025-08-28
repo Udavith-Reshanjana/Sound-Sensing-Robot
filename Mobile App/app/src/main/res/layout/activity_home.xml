@@ -148,33 +148,6 @@
                     android:textSize="18sp"/>
             </TableRow>
 
-            <TableRow android:layout_marginBottom="15dp">
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="MQTT Status"
-                    android:textColor="@color/black"
-                    android:textStyle="bold"
-                    android:textSize="18sp"/>
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text=" : "
-                    android:textColor="@color/black"
-                    android:textStyle="bold"
-                    android:textSize="18sp"/>
-
-                <TextView
-                    android:id="@+id/mqttStatusTxt"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="N/A"
-                    android:textColor="@color/black"
-                    android:textStyle="bold"
-                    android:textSize="18sp"/>
-            </TableRow>
-
             <TableRow>
                 <TextView
                     android:layout_width="wrap_content"
@@ -207,7 +180,7 @@
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="📱 Connect to 'SoundBot-AP' WiFi network to monitor your robot in real-time!"
+            android:text="Connect to 'SoundBot-AP' WiFi network to monitor your robot in real-time!"
             android:textSize="14sp"
             android:textColor="@color/purple_700"
             android:textStyle="italic"

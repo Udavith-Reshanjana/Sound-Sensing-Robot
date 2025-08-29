@@ -31,9 +31,9 @@ This approach enables environment-aware motion using just a **single ultrasonic 
 | Sound Level        | Speed (PWM) | Obstacle Detection Radius | Behavior                          |
 | ------------------ | ----------- | ------------------------- | --------------------------------- |
 | **1 - Very Quiet** | 0           | ∞ (no motion)             | Stop                              |
-| **2 - Moderate**   | 100         | 30 cm                     | Slow forward, avoid close objects |
-| **3 - Loud**       | 180         | 60 cm                     | Medium speed, wider sensing       |
-| **4 - Very Loud**  | 255         | 90 cm                     | Fast, long-range avoidance        |
+| **2 - Moderate**   | 80         | 25 cm                     | Slow forward, avoid close objects |
+| **3 - Loud**       | 140         | 40 cm                     | Medium speed, wider sensing       |
+| **4 - Very Loud**  | 200         | 70 cm                     | Fast, long-range avoidance        |
 
 ---
 

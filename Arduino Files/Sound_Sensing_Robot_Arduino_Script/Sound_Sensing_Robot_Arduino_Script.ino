@@ -16,10 +16,10 @@ const int PWMResolution = 8;
 const int rightMotorPWMSpeedChannel = 4;
 const int leftMotorPWMSpeedChannel = 5;
 
-// Noise-floor tracking
+// Noise-floor tracking - FIXED VALUES
 float ambient = 500.0;
-const float AMB_ALPHA = 0.98;
-const float THRESHOLD_DELTA = 100.0;
+const float AMB_ALPHA = 0.995; // Slower ambient adaptation
+const float THRESHOLD_DELTA = 50.0; // Lower threshold for better detection
 
 float avg = 0.0;
 int level = 1;
@@ -71,7 +71,8 @@ void updateAmbient(float level) {
 }
 
 bool isExternalSound(float level) {
-  return (level - ambient) > THRESHOLD_DELTA;
+  float delta = level - ambient;
+  return delta > THRESHOLD_DELTA;
 }
 
 void rotateMotor(int rightMotorSpeed, int leftMotorSpeed) {
@@ -113,9 +114,12 @@ void moveForward(int speed) {
 }
 
 int getSoundLevel(float avg) {
-  if (avg <= 600) return 1;
-  else if (avg <= 1000) return 2;
-  else if (avg <= 1600) return 3;
+  // Calculate delta from ambient instead of using raw values
+  float delta = avg - ambient;
+  
+  if (delta <= 100) return 1;
+  else if (delta <= 300) return 2;
+  else if (delta <= 600) return 3;
   else return 4;
 }
 
@@ -378,7 +382,7 @@ void setup() {
     html += ".footer { text-align: center; margin-top: 20px; color: #666; font-size: 14px; }</style></head>";
     html += "<body><div class=\"container\">";
     html += "<div class=\"header\"><h1>SoundBot Control Panel</h1>";
-    html += "<p>Owner: Udavith-Reshanjana</p></div>";
+    html += "<p>Owner: Udavith-Reshanjana | Tharuka Fernando</p></div>";
     html += "<div class=\"status\" id=\"status\">Loading robot status...</div>";
     html += "<div style=\"text-align: center;\">";
     html += "<button class=\"button\" onclick=\"refreshStatus()\">Refresh Status</button></div>";
@@ -461,11 +465,15 @@ void loop() {
   // Read distance
   currentDistance = readDistance();
 
-  // Clean debug output - no MQTT status
+  // Enhanced debug output with delta information
   static unsigned long lastDebug = 0;
   if (millis() - lastDebug >= 2000) {
     lastDebug = millis();
+    float delta = avg - ambient;
     Serial.print("Sound: "); Serial.print(avg, 1);
+    Serial.print(" | Ambient: "); Serial.print(ambient, 1);
+    Serial.print(" | Delta: "); Serial.print(delta, 1);
+    Serial.print(" | External: "); Serial.print(external ? "YES" : "NO");
     Serial.print(" | Level: "); Serial.print(level);
     Serial.print(" | Distance: "); Serial.print(currentDistance);
     Serial.print(" | State: "); Serial.print(robotState);
